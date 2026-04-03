@@ -1,0 +1,9 @@
+Worst disturbance bus: 90
+Max nodal nadir (Hz): 0.129078
+Max COI nadir (Hz): 0.011603
+QSS deviation (Hz): 0.088570
+Max RoCoF proxy (Hz/s): 22.500000
+Max RoCoF from simulation (Hz/s): 4.514601
+Nadir safe: 1
+QSS safe: 1
+RoCoF safe: 0
