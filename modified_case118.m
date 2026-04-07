@@ -1,8 +1,4 @@
 function mpc = modified_case118()
-%MODIFIED_CASE118  DDVPP-ready IEEE 118-bus case for nodal-frequency studies.
-%
-%   This file starts from MATPOWER's case118() and augments it with the
-%   static metadata needed by the DDVPP paper framework.
 %
 %   Design principles in this version
 %   ---------------------------------
@@ -13,17 +9,13 @@ function mpc = modified_case118()
 %   3) Cluster multipliers are kept only as INITIAL PRIORS used to build
 %      node-wise initial values. Later optimization should act directly on
 %      node-wise M and D, rather than through cluster multipliers.
-%   4) deadband_hz and delay_s are intentionally removed because they are
-%      not active states in the current reduced model and are not used as
-%      optimization variables in the DDVPP framework.
-%   5) Devices are distinguished as SG or IBR. For optimization purposes,
+%   4) Devices are distinguished as SG or IBR. For optimization purposes,
 %      all IBRs are treated as GFM-IBR and use the same parameter type.
 %
 %   Returned fields
 %   ---------------
 %   Standard MATPOWER fields:
 %      mpc.bus, mpc.gen, mpc.branch
-%
 %   DDVPP metadata:
 %      mpc.userdata.dynamic           : compatible reconstruction metadata
 %      mpc.userdata.generator_map     : reproducible host-to-template mapping
@@ -36,9 +28,8 @@ function mpc = modified_case118()
 
 mpc = case118();
 
-%% ------------------------------------------------------------------------
 %% Basic dynamic / reconstruction metadata kept for compatibility
-%% ------------------------------------------------------------------------
+% ----------------------------------------------------------------
 mpc.userdata = struct();
 mpc.userdata.dynamic = struct();
 mpc.userdata.dynamic.name = 'ddvpp_ieee118_prior_case';
@@ -70,11 +61,9 @@ mpc.userdata.dynamic.north_edges = [ ...
     26 30;
     30 38];
 
-%% ------------------------------------------------------------------------
 %% Initial-prior clusters
-%% ------------------------------------------------------------------------
-% These are no longer intended as hidden fitting knobs during optimization.
-% They are only used here to build node-wise INITIAL values for M, D, K, Tau.
+% ------------------------------------------------------------------------
+% They are used here to build node-wise INITIAL values for M, D, K, Tau.
 clusters = struct([]);
 clusters(1).hosts = [8 10 12];
 clusters(1).transformer_x_mult = 1.25;
@@ -113,9 +102,8 @@ clusters(5).tau_mult = 0.90;
 
 mpc.userdata.dynamic.clusters = clusters;
 
-%% ------------------------------------------------------------------------
 %% Generator fleet templates without deadband / delay
-%% ------------------------------------------------------------------------
+% -----------------------------------------------------------
 generator_fleet = struct( ...
     'name',        {'TB6','TC6','TB10','TC10','TG3'}, ...
     'count',       {27, 9, 5, 2, 11}, ...
@@ -125,9 +113,8 @@ generator_fleet = struct( ...
 );
 mpc.userdata.dynamic.generator_fleet = generator_fleet;
 
-%% ------------------------------------------------------------------------
 %% Reproducible generator-to-template mapping
-%% ------------------------------------------------------------------------
+% -----------------------------------------------------------
 host_buses = mpc.gen(:,1);
 [~, order] = sort(mpc.gen(:,9), 'descend');
 
@@ -157,14 +144,8 @@ generator_map.type = row_type;
 generator_map = movevars(generator_map, 'type', 'After', 'host_bus');
 mpc.userdata.generator_map = generator_map;
 
-%% ------------------------------------------------------------------------
 %% Device classification for DDVPP
-%% ------------------------------------------------------------------------
-% Explicit user request:
-%   - distinguish SG and IBR
-%   - do not split GFL and GFM
-%   - all IBRs are treated as GFM-IBR in optimization
-%
+% ------------------------------------------------------------------------
 % Practical prior used here:
 %   buses highlighted by the reconstruction hotspot / converter-support prior
 %   are treated as IBR hosts; the remaining generator hosts are treated as SG.
@@ -177,9 +158,8 @@ device_class = repmat({'SG'}, height(generator_map), 1);
 device_class(is_ibr) = {'IBR'};
 is_controllable = is_ibr;   % optimize IBRs only in the current DDVPP setup
 
-%% ------------------------------------------------------------------------
 %% Build node-wise initial dynamic priors
-%% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
 capacity_pu = generator_map.capacity_pu;
 base_H = generator_map.inertia_s;
 
@@ -207,9 +187,8 @@ end
 mu0 = mpc.userdata.dynamic.load_damping_fraction .* ...
     (max(mpc.bus(:,3), mpc.userdata.dynamic.min_load_for_mu_mw) ./ mpc.baseMVA);
 
-%% ------------------------------------------------------------------------
 %% Local feasible bounds for DDVPP optimization
-%% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
 % Design choice:
 %   - SGs are treated as fixed-support units in the current DDVPP layer.
 %   - IBRs are controllable GFM-IBR nodes.
@@ -273,9 +252,8 @@ for ii = 1:n_gen
     end
 end
 
-%% ------------------------------------------------------------------------
 %% DDVPP data bundle
-%% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
 ddvpp = struct();
 
 ddvpp.gen_dynamic_table = table( ...
@@ -318,7 +296,7 @@ ddvpp.disturbance_set = table(disturbance_id, bus, side, deltaP_mw, deltaP_pu, w
 % Security limits
 ddvpp.security_limits = struct();
 ddvpp.security_limits.rocof_limit_hz_per_s = 1.0;
-ddvpp.security_limits.nadir_limit_hz = 0.8;
+ddvpp.security_limits.nadir_limit_hz = 0.5;
 ddvpp.security_limits.qss_limit_hz = 0.2;
 ddvpp.security_limits.max_iterations_slp = 20;
 ddvpp.security_limits.max_iterations_admm = 200;
@@ -339,9 +317,8 @@ ddvpp.optimization_notes = { ...
 
 mpc.userdata.ddvpp = ddvpp;
 
-%% ------------------------------------------------------------------------
 %% Keep dynamic priors accessible for backward compatibility
-%% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
 mpc.userdata.dynamic.M = M0;
 mpc.userdata.dynamic.D = D0;
 mpc.userdata.dynamic.K = K0;
@@ -349,9 +326,8 @@ mpc.userdata.dynamic.Tau = Tau0;
 mpc.userdata.dynamic.Gamma = Gamma0;
 mpc.userdata.dynamic.mu = mu0;
 
-%% ------------------------------------------------------------------------
 %% Branch modification summary for traceability
-%% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
 branch_index = (1:size(mpc.branch,1)).';
 from_bus = mpc.branch(:,1);
 to_bus = mpc.branch(:,2);
